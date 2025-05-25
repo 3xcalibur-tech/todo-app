@@ -52,12 +52,17 @@ const ThemeToggle: React.FC = React.memo(() => {
     return state.theme === "light" ? "Light" : "Dark";
   };
 
+  const handleThemeToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleTheme();
+  };
+
   return (
     <motion.button
       className="flex items-center p-3 rounded-lg cursor-pointer hover:bg-white dark:hover:bg-gray-700 theme-toggle bg-transition"
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
-      onClick={toggleTheme}
+      onClick={handleThemeToggle}
       title={`Switch to ${state.theme === "light" ? "Dark" : "Light"} theme`}
     >
       <div className="w-6 h-6 rounded-md flex items-center justify-center mr-3 bg-gray-200 dark:bg-gray-600">
@@ -82,14 +87,23 @@ export const CategorySidebar: React.FC = React.memo(() => {
   const [categoryMenuOpen, setCategoryMenuOpen] = useState<string | null>(null);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
+  const categoryMenuRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown when clicking outside
+  // Close dropdown when clicking outside or inside sidebar but not on menu
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
+      const target = event.target as Node;
+
+      if (sidebarRef.current && !sidebarRef.current.contains(target)) {
+        // Clicked outside sidebar - close menu
+        setCategoryMenuOpen(null);
+      } else if (
         sidebarRef.current &&
-        !sidebarRef.current.contains(event.target as Node)
+        sidebarRef.current.contains(target) &&
+        categoryMenuRef.current &&
+        !categoryMenuRef.current.contains(target)
       ) {
+        // Clicked inside sidebar but outside the menu - close menu
         setCategoryMenuOpen(null);
       }
     };
@@ -102,17 +116,22 @@ export const CategorySidebar: React.FC = React.memo(() => {
   }, [categoryMenuOpen]);
 
   const handleCategoryClick = React.useCallback(
-    (id: string) => {
+    (id: string, e?: React.MouseEvent) => {
+      if (e) e.stopPropagation();
       selectCategory(id);
       setCategoryMenuOpen(null);
     },
     [selectCategory]
   );
 
-  const handleArchiveClick = React.useCallback(() => {
-    toggleArchiveView();
-    setCategoryMenuOpen(null);
-  }, [toggleArchiveView]);
+  const handleArchiveClick = React.useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      toggleArchiveView();
+      setCategoryMenuOpen(null);
+    },
+    [toggleArchiveView]
+  );
 
   const toggleCategoryMenu = React.useCallback(
     (id: string, e: React.MouseEvent) => {
@@ -147,6 +166,14 @@ export const CategorySidebar: React.FC = React.memo(() => {
     [state.categories.length, deleteCategory]
   );
 
+  const handleSidebarClick = React.useCallback((e: React.MouseEvent) => {
+    // Close menu when clicking on sidebar background (not on interactive elements)
+    const target = e.target as HTMLElement;
+    if (target === e.currentTarget || target.closest(".sidebar-background")) {
+      setCategoryMenuOpen(null);
+    }
+  }, []);
+
   return (
     <motion.div
       ref={sidebarRef}
@@ -154,6 +181,7 @@ export const CategorySidebar: React.FC = React.memo(() => {
       initial={{ x: -50, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1.0] }}
+      onClick={handleSidebarClick}
     >
       <div className="flex items-center justify-between mb-6">
         <h2 className="font-semibold text-gray-800 dark:text-gray-200 text-lg">
@@ -166,7 +194,10 @@ export const CategorySidebar: React.FC = React.memo(() => {
             backgroundColor: isDarkMode ? "#374151" : "#f3f4f6",
           }}
           whileTap={{ scale: 0.95 }}
-          onClick={() => setShowForm(true)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowForm(true);
+          }}
         >
           <PlusIcon size={14} />
         </motion.button>
@@ -183,7 +214,7 @@ export const CategorySidebar: React.FC = React.memo(() => {
             }`}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => handleCategoryClick(category.id)}
+            onClick={(e) => handleCategoryClick(category.id, e)}
             style={{ zIndex: categoryMenuOpen === category.id ? 50 : 1 }}
           >
             <div className="flex items-center">
@@ -208,6 +239,9 @@ export const CategorySidebar: React.FC = React.memo(() => {
             <AnimatePresence>
               {categoryMenuOpen === category.id && (
                 <motion.div
+                  ref={
+                    categoryMenuOpen === category.id ? categoryMenuRef : null
+                  }
                   className={`absolute bg-white dark:bg-gray-800 shadow-lg rounded-md py-1 w-32 border border-gray-200 dark:border-gray-600 category-menu ${
                     index >= state.categories.length - 2
                       ? "bottom-full mb-1 right-0"
@@ -258,7 +292,7 @@ export const CategorySidebar: React.FC = React.memo(() => {
         }`}
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
-        onClick={handleArchiveClick}
+        onClick={(e) => handleArchiveClick(e)}
       >
         <div className="w-6 h-6 rounded-md flex items-center justify-center mr-3 bg-gray-200 dark:bg-gray-600">
           <ArchiveIcon size={14} className="text-gray-600 dark:text-gray-300" />
