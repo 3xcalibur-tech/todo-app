@@ -143,7 +143,7 @@ export const TodoList: React.FC<TodoListProps> = React.memo(
         </div>
 
         <div
-          className="flex-1 overflow-y-auto px-4 py-6"
+          className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-6"
           onDragLeave={(e) => {
             // Clear drop line if we're leaving the container entirely
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
@@ -161,9 +161,9 @@ export const TodoList: React.FC<TodoListProps> = React.memo(
                   {/* Drop line above */}
                   {dropLinePosition?.todoId === todo.id &&
                     dropLinePosition.position === "above" && (
-                      <div className="absolute -top-1 left-0 right-0 h-0.5 bg-blue-500 dark:bg-blue-400 rounded-full z-50 shadow-lg">
-                        <div className="absolute -left-1 -top-1 w-2 h-2 bg-blue-500 dark:bg-blue-400 rounded-full"></div>
-                        <div className="absolute -right-1 -top-1 w-2 h-2 bg-blue-500 dark:bg-blue-400 rounded-full"></div>
+                      <div className="absolute -top-1 left-4 right-4 h-0.5 bg-blue-500 dark:bg-blue-400 rounded-full z-50 shadow-lg">
+                        <div className="absolute left-0 -top-1 w-2 h-2 bg-blue-500 dark:bg-blue-400 rounded-full"></div>
+                        <div className="absolute right-0 -top-1 w-2 h-2 bg-blue-500 dark:bg-blue-400 rounded-full"></div>
                       </div>
                     )}
 
@@ -182,9 +182,9 @@ export const TodoList: React.FC<TodoListProps> = React.memo(
                   {/* Drop line below */}
                   {dropLinePosition?.todoId === todo.id &&
                     dropLinePosition.position === "below" && (
-                      <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-500 dark:bg-blue-400 rounded-full z-50 shadow-lg">
-                        <div className="absolute -left-1 -top-1 w-2 h-2 bg-blue-500 dark:bg-blue-400 rounded-full"></div>
-                        <div className="absolute -right-1 -top-1 w-2 h-2 bg-blue-500 dark:bg-blue-400 rounded-full"></div>
+                      <div className="absolute -bottom-1 left-4 right-4 h-0.5 bg-blue-500 dark:bg-blue-400 rounded-full z-50 shadow-lg">
+                        <div className="absolute left-0 -top-1 w-2 h-2 bg-blue-500 dark:bg-blue-400 rounded-full"></div>
+                        <div className="absolute right-0 -top-1 w-2 h-2 bg-blue-500 dark:bg-blue-400 rounded-full"></div>
                       </div>
                     )}
                 </div>
