@@ -14,7 +14,11 @@ export const TodoList: React.FC<TodoListProps> = React.memo(
   ({ todoFormRef: externalTodoFormRef }) => {
     const { state, toggleArchiveView, reorderTodos } = useAppContext();
     const [editingTodoId, setEditingTodoId] = useState<string | null>(null);
-    const [isDragActive, setIsDragActive] = useState(false);
+
+    const [dropLinePosition, setDropLinePosition] = useState<{
+      todoId: string;
+      position: "above" | "below";
+    } | null>(null);
     const todoFormRef = useRef<TodoFormRef>(null);
 
     // Use external ref if provided, otherwise use local ref
@@ -50,7 +54,22 @@ export const TodoList: React.FC<TodoListProps> = React.memo(
       return "No todos yet. Add one below!";
     };
 
-    const handleReorder = (draggedTodoId: string, targetTodoId: string) => {
+    const handleDropLineUpdate = (
+      todoId: string,
+      position: "above" | "below"
+    ) => {
+      setDropLinePosition({ todoId, position });
+    };
+
+    const handleDropLineClear = () => {
+      setDropLinePosition(null);
+    };
+
+    const handleReorder = (
+      draggedTodoId: string,
+      targetTodoId: string,
+      insertPosition: "above" | "below"
+    ) => {
       if (!state.selectedCategoryId || draggedTodoId === targetTodoId) return;
 
       const incompleteTodos = sortedTodos.filter((todo) => !todo.completed);
@@ -66,12 +85,26 @@ export const TodoList: React.FC<TodoListProps> = React.memo(
       // Create new array with reordered todos
       const reorderedTodos = [...incompleteTodos];
       const [draggedTodo] = reorderedTodos.splice(draggedIndex, 1);
-      reorderedTodos.splice(targetIndex, 0, draggedTodo);
+
+      // Calculate insertion index based on position
+      let insertIndex = targetIndex;
+      if (draggedIndex < targetIndex && insertPosition === "below") {
+        insertIndex = targetIndex; // Insert after target (but account for removed item)
+      } else if (draggedIndex < targetIndex && insertPosition === "above") {
+        insertIndex = targetIndex - 1; // Insert before target (but account for removed item)
+      } else if (draggedIndex > targetIndex && insertPosition === "below") {
+        insertIndex = targetIndex + 1; // Insert after target
+      } else if (draggedIndex > targetIndex && insertPosition === "above") {
+        insertIndex = targetIndex; // Insert before target
+      }
+
+      reorderedTodos.splice(insertIndex, 0, draggedTodo);
 
       // Get the new order of todo IDs
       const newTodoIds = reorderedTodos.map((todo) => todo.id);
 
       reorderTodos(state.selectedCategoryId, newTodoIds);
+      setDropLinePosition(null);
     };
 
     return (
@@ -110,31 +143,51 @@ export const TodoList: React.FC<TodoListProps> = React.memo(
         </div>
 
         <div
-          className={`flex-1 overflow-y-auto px-4 py-6 transition-colors duration-200 ${
-            isDragActive ? "bg-blue-50 dark:bg-blue-900/10" : ""
-          }`}
-          onDragEnter={() => setIsDragActive(true)}
+          className="flex-1 overflow-y-auto px-4 py-6"
           onDragLeave={(e) => {
-            // Only set to false if we're leaving the container entirely
+            // Clear drop line if we're leaving the container entirely
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-              setIsDragActive(false);
+              setDropLinePosition(null);
             }
           }}
-          onDrop={() => setIsDragActive(false)}
+          onDrop={() => {
+            setDropLinePosition(null);
+          }}
         >
           {sortedTodos.length > 0 ? (
             <div>
               {sortedTodos.map((todo, index) => (
-                <TodoItem
-                  key={todo.id}
-                  todo={todo}
-                  isEditing={todo.id === editingTodoId}
-                  onStartEditing={() => setEditingTodoId(todo.id)}
-                  onStopEditing={() => setEditingTodoId(null)}
-                  onReorder={handleReorder}
-                  canDrag={!todo.completed && !state.showArchived}
-                  delay={index * 0.05}
-                />
+                <div key={todo.id} className="relative">
+                  {/* Drop line above */}
+                  {dropLinePosition?.todoId === todo.id &&
+                    dropLinePosition.position === "above" && (
+                      <div className="absolute -top-1 left-0 right-0 h-0.5 bg-blue-500 dark:bg-blue-400 rounded-full z-50 shadow-lg">
+                        <div className="absolute -left-1 -top-1 w-2 h-2 bg-blue-500 dark:bg-blue-400 rounded-full"></div>
+                        <div className="absolute -right-1 -top-1 w-2 h-2 bg-blue-500 dark:bg-blue-400 rounded-full"></div>
+                      </div>
+                    )}
+
+                  <TodoItem
+                    todo={todo}
+                    isEditing={todo.id === editingTodoId}
+                    onStartEditing={() => setEditingTodoId(todo.id)}
+                    onStopEditing={() => setEditingTodoId(null)}
+                    onReorder={handleReorder}
+                    onDropLineUpdate={handleDropLineUpdate}
+                    onDropLineClear={handleDropLineClear}
+                    canDrag={!todo.completed && !state.showArchived}
+                    delay={index * 0.05}
+                  />
+
+                  {/* Drop line below */}
+                  {dropLinePosition?.todoId === todo.id &&
+                    dropLinePosition.position === "below" && (
+                      <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-500 dark:bg-blue-400 rounded-full z-50 shadow-lg">
+                        <div className="absolute -left-1 -top-1 w-2 h-2 bg-blue-500 dark:bg-blue-400 rounded-full"></div>
+                        <div className="absolute -right-1 -top-1 w-2 h-2 bg-blue-500 dark:bg-blue-400 rounded-full"></div>
+                      </div>
+                    )}
+                </div>
               ))}
             </div>
           ) : (

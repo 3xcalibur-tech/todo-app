@@ -9,7 +9,13 @@ interface TodoItemProps {
   isEditing: boolean;
   onStartEditing: () => void;
   onStopEditing: () => void;
-  onReorder?: (draggedTodoId: string, targetTodoId: string) => void;
+  onReorder?: (
+    draggedTodoId: string,
+    targetTodoId: string,
+    insertPosition: "above" | "below"
+  ) => void;
+  onDropLineUpdate?: (todoId: string, position: "above" | "below") => void;
+  onDropLineClear?: () => void;
   canDrag?: boolean;
   delay?: number;
 }
@@ -21,6 +27,8 @@ export const TodoItem: React.FC<TodoItemProps> = React.memo(
     onStartEditing,
     onStopEditing,
     onReorder,
+    onDropLineUpdate,
+    onDropLineClear,
     canDrag = false,
     delay = 0,
   }) => {
@@ -34,7 +42,6 @@ export const TodoItem: React.FC<TodoItemProps> = React.memo(
     } = useAppContext();
     const [editValue, setEditValue] = useState(todo.title);
     const [isDragging, setIsDragging] = useState(false);
-    const [draggedOver, setDraggedOver] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const archiveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -121,45 +128,60 @@ export const TodoItem: React.FC<TodoItemProps> = React.memo(
 
     const handleDragEnd = () => {
       setIsDragging(false);
-      setDraggedOver(false);
+      onDropLineClear?.();
     };
 
     const handleDragOver = (e: React.DragEvent) => {
-      if (!canDrag) return;
+      if (!canDrag || !onDropLineUpdate) return;
       e.preventDefault();
       e.dataTransfer.dropEffect = "move";
-      setDraggedOver(true);
+
+      // Calculate if we're in the top or bottom half of the element
+      const rect = e.currentTarget.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      const position = e.clientY < midY ? "above" : "below";
+
+      onDropLineUpdate(todo.id, position);
     };
 
-    const handleDragLeave = () => {
-      setDraggedOver(false);
+    const handleDragLeave = (e: React.DragEvent) => {
+      // Only clear if we're leaving the element entirely
+      const rect = e.currentTarget.getBoundingClientRect();
+      if (
+        e.clientX < rect.left ||
+        e.clientX > rect.right ||
+        e.clientY < rect.top ||
+        e.clientY > rect.bottom
+      ) {
+        onDropLineClear?.();
+      }
     };
 
     const handleDrop = (e: React.DragEvent) => {
       e.preventDefault();
-      setDraggedOver(false);
+      onDropLineClear?.();
 
       if (!canDrag || !onReorder) return;
 
       const draggedTodoId = e.dataTransfer.getData("text/plain");
       if (draggedTodoId !== todo.id) {
-        onReorder(draggedTodoId, todo.id);
+        // Calculate drop position
+        const rect = e.currentTarget.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        const position = e.clientY < midY ? "above" : "below";
+
+        onReorder(draggedTodoId, todo.id, position);
       }
     };
 
     return (
       <motion.div
-        className={`group mb-3 rounded-xl bg-white dark:bg-gray-700 shadow-sm border overflow-hidden todo-item transition-all duration-200
+        className={`group mb-3 rounded-xl bg-white dark:bg-gray-700 shadow-sm border border-gray-100 dark:border-gray-600 overflow-hidden todo-item transition-all duration-200
                  ${todo.completed ? "opacity-70" : ""}
                  ${
                    isDragging
                      ? "opacity-50 shadow-2xl z-50 transform rotate-1"
                      : ""
-                 }
-                 ${
-                   draggedOver
-                     ? "border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-900/20 scale-105"
-                     : "border-gray-100 dark:border-gray-600"
                  }
                  ${
                    canDrag && !todo.completed
