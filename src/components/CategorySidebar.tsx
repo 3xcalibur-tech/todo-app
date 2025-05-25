@@ -76,13 +76,8 @@ const ThemeToggle: React.FC = React.memo(() => {
 });
 
 export const CategorySidebar: React.FC = React.memo(() => {
-  const {
-    state,
-    selectCategory,
-    toggleArchiveView,
-    deleteCategory,
-    isDarkMode,
-  } = useAppContext();
+  const { state, selectCategory, toggleArchiveView, deleteCategory } =
+    useAppContext();
   const [showForm, setShowForm] = useState(false);
   const [categoryMenuOpen, setCategoryMenuOpen] = useState<string | null>(null);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
@@ -188,11 +183,8 @@ export const CategorySidebar: React.FC = React.memo(() => {
           Categories
         </h2>
         <motion.button
-          className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 flex items-center justify-center action-button"
-          whileHover={{
-            scale: 1.05,
-            backgroundColor: isDarkMode ? "#374151" : "#f3f4f6",
-          }}
+          className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 flex items-center justify-center action-button"
+          whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={(e) => {
             e.stopPropagation();
