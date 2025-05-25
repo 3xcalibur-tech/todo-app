@@ -8,12 +8,6 @@ import React, {
 } from "react";
 import { nanoid } from "nanoid";
 import { AppState, AppAction, Category } from "../types";
-import {
-  PencilIcon,
-  ListChecksIcon,
-  ClipboardListIcon,
-  BookmarkIcon,
-} from "lucide-react";
 
 const defaultCategories: Category[] = [
   {

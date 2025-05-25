@@ -55,11 +55,9 @@ const EMOJIS = [
   { id: "⚽", component: "⚽", type: "emoji" },
 ];
 
-const ALL_ICONS = [...ICONS, ...EMOJIS];
-
 export const CategoryForm: React.FC<CategoryFormProps> = React.memo(
   ({ categoryId, onClose }) => {
-    const { state, addCategory, renameCategory, updateCategory } =
+    const { state, addCategory, updateCategory } =
       useAppContext();
     const [name, setName] = useState("");
     const [color, setColor] = useState(COLORS[0]);

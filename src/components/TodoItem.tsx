@@ -53,11 +53,9 @@ export const TodoItem: React.FC<TodoItemProps> = React.memo(
       }
     }, [isEditing]);
 
-    // Reset hover state when todo is completed
+    // Reset hover state when todo completion status changes
     useEffect(() => {
-      if (todo.completed) {
-        setIsHovered(false);
-      }
+      setIsHovered(false);
     }, [todo.completed]);
 
     // Cleanup timeout only on unmount
@@ -78,6 +76,9 @@ export const TodoItem: React.FC<TodoItemProps> = React.memo(
     const handleToggle = () => {
       // Store the current completion state before toggling
       const wasCompleted = todo.completed;
+
+      // Reset hover state immediately to prevent flash of visible buttons
+      setIsHovered(false);
 
       console.log("🔄 Toggle clicked:", {
         todoId: todo.id,

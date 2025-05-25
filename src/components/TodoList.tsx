@@ -1,7 +1,6 @@
 import React, { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { useAppContext } from "../context/AppContext";
-import { Todo } from "../types";
 import { TodoItem } from "./TodoItem";
 import { TodoForm, TodoFormRef } from "./TodoForm";
 import { ArchiveIcon, ArrowLeftIcon } from "lucide-react";
