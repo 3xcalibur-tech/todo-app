@@ -43,8 +43,12 @@ export const TodoItem: React.FC<TodoItemProps> = React.memo(
     const [editValue, setEditValue] = useState(todo.title);
     const [isDragging, setIsDragging] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
+    const [archiveCountdown, setArchiveCountdown] = useState<number | null>(
+      null
+    );
     const inputRef = useRef<HTMLInputElement>(null);
     const archiveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
       if (isEditing && inputRef.current) {
@@ -58,17 +62,22 @@ export const TodoItem: React.FC<TodoItemProps> = React.memo(
       setIsHovered(false);
     }, [todo.completed]);
 
-    // Cleanup timeout only on unmount
+    // Cleanup timeouts only on unmount
     useEffect(() => {
       return () => {
         console.log(
-          "🧹 Component unmounting, cleaning up timeout for todo:",
+          "🧹 Component unmounting, cleaning up timeouts for todo:",
           todo.id
         );
         if (archiveTimeoutRef.current) {
-          console.log("❌ Clearing timeout on unmount");
+          console.log("❌ Clearing archive timeout on unmount");
           clearTimeout(archiveTimeoutRef.current);
           archiveTimeoutRef.current = null;
+        }
+        if (countdownIntervalRef.current) {
+          console.log("❌ Clearing countdown interval on unmount");
+          clearInterval(countdownIntervalRef.current);
+          countdownIntervalRef.current = null;
         }
       };
     }, []); // Empty dependency array = only on unmount
@@ -90,12 +99,18 @@ export const TodoItem: React.FC<TodoItemProps> = React.memo(
 
       toggleTodo(todo.id);
 
-      // Clear any existing archive timeout
+      // Clear any existing archive timeout and countdown
       if (archiveTimeoutRef.current) {
         console.log("⏰ Clearing existing timeout");
         clearTimeout(archiveTimeoutRef.current);
         archiveTimeoutRef.current = null;
       }
+      if (countdownIntervalRef.current) {
+        console.log("⏰ Clearing existing countdown");
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+      }
+      setArchiveCountdown(null);
 
       // If we're in archive view and unchecking a completed todo, unarchive it
       if (state.showArchived && wasCompleted) {
@@ -105,10 +120,29 @@ export const TodoItem: React.FC<TodoItemProps> = React.memo(
       // If we're in normal view and completing a todo (was incomplete), archive it after delay
       else if (!state.showArchived && !wasCompleted) {
         console.log("⏳ Setting archive timeout for 3 seconds");
+
+        // Start countdown from 3 seconds
+        setArchiveCountdown(3);
+
+        // Update countdown every 100ms for smooth animation
+        countdownIntervalRef.current = setInterval(() => {
+          setArchiveCountdown((prev) => {
+            if (prev === null || prev <= 0.1) {
+              return null;
+            }
+            return Math.max(0, prev - 0.1);
+          });
+        }, 100);
+
         archiveTimeoutRef.current = setTimeout(() => {
           console.log("📥 Archiving todo after timeout");
           archiveTodo(todo.id);
           archiveTimeoutRef.current = null;
+          if (countdownIntervalRef.current) {
+            clearInterval(countdownIntervalRef.current);
+            countdownIntervalRef.current = null;
+          }
+          setArchiveCountdown(null);
         }, 3000);
       } else {
         console.log("❌ No archive action taken", {
@@ -329,15 +363,29 @@ export const TodoItem: React.FC<TodoItemProps> = React.memo(
               {todo.completed && <CheckIcon size={14} />}
             </motion.button>
 
-            <div
-              className={`flex-1 text-base leading-relaxed cursor-pointer ${
-                todo.completed
-                  ? "line-through text-gray-500 dark:text-gray-400"
-                  : "text-gray-800 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400"
-              }`}
-              onClick={handleTextClick}
-            >
-              {todo.title}
+            <div className="flex-1 flex items-center">
+              <div
+                className={`text-base leading-relaxed cursor-pointer ${
+                  todo.completed
+                    ? "line-through text-gray-500 dark:text-gray-400"
+                    : "text-gray-800 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400"
+                }`}
+                onClick={handleTextClick}
+              >
+                {todo.title}
+              </div>
+
+              {/* Archive countdown indicator */}
+              {archiveCountdown !== null && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  className="ml-3 px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-xs font-medium rounded-full border border-amber-200 dark:border-amber-700/50"
+                >
+                  {archiveCountdown.toFixed(1)}s
+                </motion.div>
+              )}
             </div>
 
             <motion.button
