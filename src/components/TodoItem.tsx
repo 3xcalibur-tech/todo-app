@@ -180,7 +180,7 @@ export const TodoItem: React.FC<TodoItemProps> = React.memo(
                  ${todo.completed ? "opacity-70" : ""}
                  ${
                    isDragging
-                     ? "opacity-50 shadow-2xl z-50 transform rotate-1"
+                     ? "opacity-80 shadow-2xl z-50 ring-2 ring-blue-400 ring-opacity-50"
                      : ""
                  }
                  ${
@@ -190,9 +190,9 @@ export const TodoItem: React.FC<TodoItemProps> = React.memo(
                  }`}
         initial={false}
         animate={{
-          opacity: isDragging ? 0.5 : 1,
+          opacity: isDragging ? 0.85 : 1,
           y: 0,
-          scale: isDragging ? 1.05 : 1,
+          scale: isDragging ? 1.02 : 1,
         }}
         exit={{ opacity: 0, height: 0, marginBottom: 0 }}
         transition={{
