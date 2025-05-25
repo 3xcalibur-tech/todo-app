@@ -128,6 +128,7 @@ export const TodoItem: React.FC<TodoItemProps> = React.memo(
 
     const handleDragEnd = () => {
       setIsDragging(false);
+      setIsHovered(false); // Reset hover state to hide delete button
       onDropLineClear?.();
     };
 
@@ -275,7 +276,11 @@ export const TodoItem: React.FC<TodoItemProps> = React.memo(
             </div>
 
             <motion.button
-              className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 ml-3 opacity-0 group-hover:opacity-100"
+              className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 ml-3 transition-opacity duration-200 ${
+                isHovered && !isDragging && !isEditing
+                  ? "opacity-100"
+                  : "opacity-0"
+              }`}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={handleDelete}
