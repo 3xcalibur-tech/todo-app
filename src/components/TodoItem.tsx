@@ -35,23 +35,29 @@ export const TodoItem: React.FC<TodoItemProps> = React.memo(
     const [editValue, setEditValue] = useState(todo.title);
     const [isDragging, setIsDragging] = useState(false);
     const [draggedOver, setDraggedOver] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const archiveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
       if (isEditing && inputRef.current) {
         inputRef.current.focus();
+        setIsHovered(false); // Hide drag handle when editing
       }
     }, [isEditing]);
 
-    // Cleanup timeout on unmount
+    // Cleanup timeout on unmount and reset hover state when todo is completed
     useEffect(() => {
+      if (todo.completed) {
+        setIsHovered(false);
+      }
+
       return () => {
         if (archiveTimeoutRef.current) {
           clearTimeout(archiveTimeoutRef.current);
         }
       };
-    }, []);
+    }, [todo.completed]);
 
     const handleToggle = () => {
       toggleTodo(todo.id);
@@ -108,12 +114,14 @@ export const TodoItem: React.FC<TodoItemProps> = React.memo(
         return;
       }
       setIsDragging(true);
+      setIsHovered(false); // Hide drag handle during drag
       e.dataTransfer.setData("text/plain", todo.id);
       e.dataTransfer.effectAllowed = "move";
     };
 
     const handleDragEnd = () => {
       setIsDragging(false);
+      setDraggedOver(false);
     };
 
     const handleDragOver = (e: React.DragEvent) => {
@@ -175,6 +183,8 @@ export const TodoItem: React.FC<TodoItemProps> = React.memo(
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
       >
         {isEditing ? (
           <div className="p-4">
@@ -203,8 +213,16 @@ export const TodoItem: React.FC<TodoItemProps> = React.memo(
             {/* Drag handle - only show for incomplete todos when dragging is enabled */}
             {canDrag && !todo.completed && (
               <div
-                className="flex-shrink-0 w-6 h-6 mr-3 flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                className={`flex-shrink-0 w-6 h-6 mr-3 flex items-center justify-center cursor-grab active:cursor-grabbing transition-all duration-200 ${
+                  isHovered && !isDragging && !isEditing
+                    ? "opacity-100 text-gray-600 dark:text-gray-300"
+                    : "opacity-0 text-gray-400 dark:text-gray-500"
+                }`}
                 onMouseDown={(e) => e.stopPropagation()}
+                style={{
+                  pointerEvents:
+                    isHovered && !isDragging && !isEditing ? "auto" : "none",
+                }}
               >
                 <GripVerticalIcon size={16} />
               </div>
