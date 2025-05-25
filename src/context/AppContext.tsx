@@ -326,9 +326,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         (todo) =>
           todo.categoryId === state.selectedCategoryId && !todo.completed
       );
+
+      // Safely calculate max order, handling undefined/null order values
       const maxOrder =
         categoryTodos.length > 0
-          ? Math.max(...categoryTodos.map((todo) => todo.order))
+          ? Math.max(...categoryTodos.map((todo) => todo.order || 0))
           : -1;
 
       dispatch({

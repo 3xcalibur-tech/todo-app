@@ -53,38 +53,67 @@ export const TodoItem: React.FC<TodoItemProps> = React.memo(
       }
     }, [isEditing]);
 
-    // Cleanup timeout on unmount and reset hover state when todo is completed
+    // Reset hover state when todo is completed
     useEffect(() => {
       if (todo.completed) {
         setIsHovered(false);
       }
-
-      return () => {
-        if (archiveTimeoutRef.current) {
-          clearTimeout(archiveTimeoutRef.current);
-        }
-      };
     }, [todo.completed]);
 
+    // Cleanup timeout only on unmount
+    useEffect(() => {
+      return () => {
+        console.log(
+          "🧹 Component unmounting, cleaning up timeout for todo:",
+          todo.id
+        );
+        if (archiveTimeoutRef.current) {
+          console.log("❌ Clearing timeout on unmount");
+          clearTimeout(archiveTimeoutRef.current);
+          archiveTimeoutRef.current = null;
+        }
+      };
+    }, []); // Empty dependency array = only on unmount
+
     const handleToggle = () => {
+      // Store the current completion state before toggling
+      const wasCompleted = todo.completed;
+
+      console.log("🔄 Toggle clicked:", {
+        todoId: todo.id,
+        todoTitle: todo.title,
+        wasCompleted,
+        showArchived: state.showArchived,
+        currentArchived: todo.archived,
+      });
+
       toggleTodo(todo.id);
 
       // Clear any existing archive timeout
       if (archiveTimeoutRef.current) {
+        console.log("⏰ Clearing existing timeout");
         clearTimeout(archiveTimeoutRef.current);
         archiveTimeoutRef.current = null;
       }
 
       // If we're in archive view and unchecking a completed todo, unarchive it
-      if (state.showArchived && todo.completed) {
+      if (state.showArchived && wasCompleted) {
+        console.log("📤 Unarchiving todo from archive view");
         unarchiveTodo(todo.id);
       }
-      // If we're in normal view and completing a todo, archive it after delay
-      else if (!state.showArchived && !todo.completed) {
+      // If we're in normal view and completing a todo (was incomplete), archive it after delay
+      else if (!state.showArchived && !wasCompleted) {
+        console.log("⏳ Setting archive timeout for 3 seconds");
         archiveTimeoutRef.current = setTimeout(() => {
+          console.log("📥 Archiving todo after timeout");
           archiveTodo(todo.id);
           archiveTimeoutRef.current = null;
         }, 3000);
+      } else {
+        console.log("❌ No archive action taken", {
+          showArchived: state.showArchived,
+          wasCompleted,
+        });
       }
     };
 
