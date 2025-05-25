@@ -147,6 +147,17 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
             : todo
         ),
       };
+    case "REORDER_TODOS":
+      return {
+        ...state,
+        todos: state.todos.map((todo) => {
+          if (todo.categoryId === action.payload.categoryId) {
+            const newOrder = action.payload.todoIds.indexOf(todo.id);
+            return newOrder !== -1 ? { ...todo, order: newOrder } : todo;
+          }
+          return todo;
+        }),
+      };
     case "SET_THEME":
       return {
         ...state,
@@ -177,6 +188,7 @@ type AppContextType = {
     icon: string
   ) => void;
   editTodo: (id: string, title: string) => void;
+  reorderTodos: (categoryId: string, todoIds: string[]) => void;
   setTheme: (theme: "light" | "dark") => void;
   toggleTheme: () => void;
   isDarkMode: boolean;
@@ -204,6 +216,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
           Array.isArray(parsed.categories) &&
           Array.isArray(parsed.todos)
         ) {
+          // Migration: add order field to todos that don't have it
+          const migratedTodos = parsed.todos.map(
+            (todo: any, index: number) => ({
+              ...todo,
+              order: todo.order !== undefined ? todo.order : index,
+            })
+          );
+
           // If no theme is saved, use system preference
           if (
             !parsed.theme ||
@@ -211,7 +231,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
           ) {
             parsed.theme = systemPrefersDark ? "dark" : "light";
           }
-          return parsed;
+
+          return {
+            ...parsed,
+            todos: migratedTodos,
+          };
         }
       }
     } catch (error) {
@@ -297,6 +321,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     (title: string) => {
       if (!state.selectedCategoryId) return;
 
+      // Calculate next order value for this category
+      const categoryTodos = state.todos.filter(
+        (todo) =>
+          todo.categoryId === state.selectedCategoryId && !todo.completed
+      );
+      const maxOrder =
+        categoryTodos.length > 0
+          ? Math.max(...categoryTodos.map((todo) => todo.order))
+          : -1;
+
       dispatch({
         type: "ADD_TODO",
         payload: {
@@ -306,10 +340,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
           categoryId: state.selectedCategoryId,
           archived: false,
           createdAt: Date.now(),
+          order: maxOrder + 1,
         },
       });
     },
-    [state.selectedCategoryId]
+    [state.selectedCategoryId, state.todos]
   );
 
   const toggleTodo = useCallback((id: string) => {
@@ -370,6 +405,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   }, []);
 
+  const reorderTodos = useCallback((categoryId: string, todoIds: string[]) => {
+    dispatch({
+      type: "REORDER_TODOS",
+      payload: { categoryId, todoIds },
+    });
+  }, []);
+
   const setTheme = useCallback((theme: "light" | "dark") => {
     dispatch({
       type: "SET_THEME",
@@ -402,6 +444,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       renameCategory,
       updateCategory,
       editTodo,
+      reorderTodos,
       setTheme,
       toggleTheme,
       isDarkMode,
@@ -420,6 +463,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       renameCategory,
       updateCategory,
       editTodo,
+      reorderTodos,
       setTheme,
       toggleTheme,
       isDarkMode,

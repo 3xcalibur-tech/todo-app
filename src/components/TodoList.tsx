@@ -12,8 +12,9 @@ interface TodoListProps {
 
 export const TodoList: React.FC<TodoListProps> = React.memo(
   ({ todoFormRef: externalTodoFormRef }) => {
-    const { state, toggleArchiveView } = useAppContext();
+    const { state, toggleArchiveView, reorderTodos } = useAppContext();
     const [editingTodoId, setEditingTodoId] = useState<string | null>(null);
+    const [isDragActive, setIsDragActive] = useState(false);
     const todoFormRef = useRef<TodoFormRef>(null);
 
     // Use external ref if provided, otherwise use local ref
@@ -29,11 +30,16 @@ export const TodoList: React.FC<TodoListProps> = React.memo(
         todo.archived === state.showArchived
     );
 
-    // Sort todos: incomplete first, then by creation date (newest first)
+    // Sort todos: incomplete first by order, then completed by creation date (newest first)
     const sortedTodos = [...filteredTodos].sort((a, b) => {
       if (a.completed !== b.completed) {
         return a.completed ? 1 : -1;
       }
+      if (!a.completed && !b.completed) {
+        // Both incomplete: sort by order
+        return (a.order || 0) - (b.order || 0);
+      }
+      // Both completed: sort by creation date (newest first)
       return b.createdAt - a.createdAt;
     });
 
@@ -42,6 +48,30 @@ export const TodoList: React.FC<TodoListProps> = React.memo(
         return "No archived todos yet";
       }
       return "No todos yet. Add one below!";
+    };
+
+    const handleReorder = (draggedTodoId: string, targetTodoId: string) => {
+      if (!state.selectedCategoryId || draggedTodoId === targetTodoId) return;
+
+      const incompleteTodos = sortedTodos.filter((todo) => !todo.completed);
+      const draggedIndex = incompleteTodos.findIndex(
+        (todo) => todo.id === draggedTodoId
+      );
+      const targetIndex = incompleteTodos.findIndex(
+        (todo) => todo.id === targetTodoId
+      );
+
+      if (draggedIndex === -1 || targetIndex === -1) return;
+
+      // Create new array with reordered todos
+      const reorderedTodos = [...incompleteTodos];
+      const [draggedTodo] = reorderedTodos.splice(draggedIndex, 1);
+      reorderedTodos.splice(targetIndex, 0, draggedTodo);
+
+      // Get the new order of todo IDs
+      const newTodoIds = reorderedTodos.map((todo) => todo.id);
+
+      reorderTodos(state.selectedCategoryId, newTodoIds);
     };
 
     return (
@@ -79,17 +109,31 @@ export const TodoList: React.FC<TodoListProps> = React.memo(
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-6">
+        <div
+          className={`flex-1 overflow-y-auto px-4 py-6 transition-colors duration-200 ${
+            isDragActive ? "bg-blue-50 dark:bg-blue-900/10" : ""
+          }`}
+          onDragEnter={() => setIsDragActive(true)}
+          onDragLeave={(e) => {
+            // Only set to false if we're leaving the container entirely
+            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+              setIsDragActive(false);
+            }
+          }}
+          onDrop={() => setIsDragActive(false)}
+        >
           {sortedTodos.length > 0 ? (
             <div>
-              {sortedTodos.map((todo) => (
+              {sortedTodos.map((todo, index) => (
                 <TodoItem
                   key={todo.id}
                   todo={todo}
                   isEditing={todo.id === editingTodoId}
                   onStartEditing={() => setEditingTodoId(todo.id)}
                   onStopEditing={() => setEditingTodoId(null)}
-                  delay={0}
+                  onReorder={handleReorder}
+                  canDrag={!todo.completed && !state.showArchived}
+                  delay={index * 0.05}
                 />
               ))}
             </div>

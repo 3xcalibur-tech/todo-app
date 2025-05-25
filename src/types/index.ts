@@ -5,6 +5,7 @@ export interface Todo {
   categoryId: string;
   archived: boolean;
   createdAt: number;
+  order: number;
 }
 
 export interface Category {
@@ -38,4 +39,8 @@ export type AppAction =
       payload: { id: string; name: string; color: string; icon: string };
     }
   | { type: "EDIT_TODO"; payload: { id: string; title: string } }
+  | {
+      type: "REORDER_TODOS";
+      payload: { categoryId: string; todoIds: string[] };
+    }
   | { type: "SET_THEME"; payload: "light" | "dark" };

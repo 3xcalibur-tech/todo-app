@@ -2,18 +2,28 @@ import React, { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useAppContext } from "../context/AppContext";
 import { Todo } from "../types";
-import { CheckIcon, TrashIcon } from "lucide-react";
+import { CheckIcon, TrashIcon, GripVerticalIcon } from "lucide-react";
 
 interface TodoItemProps {
   todo: Todo;
   isEditing: boolean;
   onStartEditing: () => void;
   onStopEditing: () => void;
+  onReorder?: (draggedTodoId: string, targetTodoId: string) => void;
+  canDrag?: boolean;
   delay?: number;
 }
 
 export const TodoItem: React.FC<TodoItemProps> = React.memo(
-  ({ todo, isEditing, onStartEditing, onStopEditing, delay = 0 }) => {
+  ({
+    todo,
+    isEditing,
+    onStartEditing,
+    onStopEditing,
+    onReorder,
+    canDrag = false,
+    delay = 0,
+  }) => {
     const {
       state,
       toggleTodo,
@@ -23,6 +33,8 @@ export const TodoItem: React.FC<TodoItemProps> = React.memo(
       editTodo,
     } = useAppContext();
     const [editValue, setEditValue] = useState(todo.title);
+    const [isDragging, setIsDragging] = useState(false);
+    const [draggedOver, setDraggedOver] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const archiveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -89,17 +101,80 @@ export const TodoItem: React.FC<TodoItemProps> = React.memo(
       }
     };
 
+    // Drag handlers
+    const handleDragStart = (e: React.DragEvent) => {
+      if (!canDrag) {
+        e.preventDefault();
+        return;
+      }
+      setIsDragging(true);
+      e.dataTransfer.setData("text/plain", todo.id);
+      e.dataTransfer.effectAllowed = "move";
+    };
+
+    const handleDragEnd = () => {
+      setIsDragging(false);
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+      if (!canDrag) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      setDraggedOver(true);
+    };
+
+    const handleDragLeave = () => {
+      setDraggedOver(false);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+      e.preventDefault();
+      setDraggedOver(false);
+
+      if (!canDrag || !onReorder) return;
+
+      const draggedTodoId = e.dataTransfer.getData("text/plain");
+      if (draggedTodoId !== todo.id) {
+        onReorder(draggedTodoId, todo.id);
+      }
+    };
+
     return (
       <motion.div
-        className={`group mb-3 rounded-xl bg-white dark:bg-gray-700 shadow-sm border border-gray-100 dark:border-gray-600 overflow-hidden todo-item
-                 ${todo.completed ? "opacity-70" : ""}`}
+        className={`group mb-3 rounded-xl bg-white dark:bg-gray-700 shadow-sm border overflow-hidden todo-item transition-all duration-200
+                 ${todo.completed ? "opacity-70" : ""}
+                 ${
+                   isDragging
+                     ? "opacity-50 shadow-2xl z-50 transform rotate-1"
+                     : ""
+                 }
+                 ${
+                   draggedOver
+                     ? "border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-900/20 scale-105"
+                     : "border-gray-100 dark:border-gray-600"
+                 }
+                 ${
+                   canDrag && !todo.completed
+                     ? "hover:shadow-md cursor-grab active:cursor-grabbing"
+                     : ""
+                 }`}
         initial={false}
-        animate={{ opacity: 1, y: 0 }}
+        animate={{
+          opacity: isDragging ? 0.5 : 1,
+          y: 0,
+          scale: isDragging ? 1.05 : 1,
+        }}
         exit={{ opacity: 0, height: 0, marginBottom: 0 }}
         transition={{
           duration: 0.15,
           ease: "easeOut",
         }}
+        draggable={canDrag}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
       >
         {isEditing ? (
           <div className="p-4">
@@ -125,6 +200,16 @@ export const TodoItem: React.FC<TodoItemProps> = React.memo(
           </div>
         ) : (
           <div className="flex items-center p-4 min-h-[60px]">
+            {/* Drag handle - only show for incomplete todos when dragging is enabled */}
+            {canDrag && !todo.completed && (
+              <div
+                className="flex-shrink-0 w-6 h-6 mr-3 flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                <GripVerticalIcon size={16} />
+              </div>
+            )}
+
             <motion.button
               className={`flex-shrink-0 w-6 h-6 rounded-full mr-4 flex items-center justify-center ${
                 todo.completed
