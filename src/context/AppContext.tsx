@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useReducer, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useReducer,
+  useEffect,
+  useMemo,
+  useCallback,
+} from "react";
 import { nanoid } from "nanoid";
 import { AppState, AppAction, Category } from "../types";
 import {
@@ -41,7 +48,6 @@ const initialState: AppState = {
   selectedCategoryId: "personal",
   showArchived: false,
   theme: "light", // Will be set based on system preference
-  isDarkMode: false, // Will be set based on system preference
 };
 
 const appReducer = (state: AppState, action: AppAction): AppState => {
@@ -145,12 +151,6 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
       return {
         ...state,
         theme: action.payload,
-        isDarkMode: action.payload === "dark",
-      };
-    case "UPDATE_DARK_MODE":
-      return {
-        ...state,
-        isDarkMode: action.payload,
       };
     default:
       return state;
@@ -179,6 +179,7 @@ type AppContextType = {
   editTodo: (id: string, title: string) => void;
   setTheme: (theme: "light" | "dark") => void;
   toggleTheme: () => void;
+  isDarkMode: boolean;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -210,7 +211,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
           ) {
             parsed.theme = systemPrefersDark ? "dark" : "light";
           }
-          parsed.isDarkMode = parsed.theme === "dark";
           return parsed;
         }
       }
@@ -222,170 +222,212 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     return {
       ...initialState,
       theme: systemPrefersDark ? "dark" : "light",
-      isDarkMode: systemPrefersDark,
     };
   };
 
   const [state, dispatch] = useReducer(appReducer, getInitialState());
 
-  // Apply dark class to document
-  useEffect(() => {
-    if (state.isDarkMode) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  }, [state.isDarkMode]);
+  // Derive isDarkMode from theme
+  const isDarkMode = state.theme === "dark";
 
-  // Save state to localStorage whenever it changes with error handling
+  // Apply dark class to document - only when theme changes
   useEffect(() => {
-    try {
-      localStorage.setItem("todoAppState", JSON.stringify(state));
-    } catch (error) {
-      console.warn("Failed to save state to localStorage:", error);
+    const root = document.documentElement;
+    // Add immediate class to prevent transitions during theme change
+    root.classList.add("theme-immediate");
+
+    if (isDarkMode) {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
     }
+
+    // Remove immediate class after a frame to re-enable transitions
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        root.classList.remove("theme-immediate");
+      });
+    });
+  }, [isDarkMode]);
+
+  // Save state to localStorage - debounced to avoid excessive writes
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      try {
+        localStorage.setItem("todoAppState", JSON.stringify(state));
+      } catch (error) {
+        console.warn("Failed to save state to localStorage:", error);
+      }
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
   }, [state]);
 
-  const addCategory = (name: string, color: string, icon: string) => {
-    dispatch({
-      type: "ADD_CATEGORY",
-      payload: {
-        id: nanoid(),
-        name,
-        color,
-        icon,
-      },
-    });
-  };
+  // Memoize all action functions to prevent unnecessary re-renders
+  const addCategory = useCallback(
+    (name: string, color: string, icon: string) => {
+      dispatch({
+        type: "ADD_CATEGORY",
+        payload: {
+          id: nanoid(),
+          name,
+          color,
+          icon,
+        },
+      });
+    },
+    []
+  );
 
-  const deleteCategory = (id: string) => {
+  const deleteCategory = useCallback((id: string) => {
     dispatch({
       type: "DELETE_CATEGORY",
       payload: id,
     });
-  };
+  }, []);
 
-  const selectCategory = (id: string) => {
+  const selectCategory = useCallback((id: string) => {
     dispatch({
       type: "SELECT_CATEGORY",
       payload: id,
     });
-  };
+  }, []);
 
-  const addTodo = (title: string) => {
-    if (!state.selectedCategoryId) return;
+  const addTodo = useCallback(
+    (title: string) => {
+      if (!state.selectedCategoryId) return;
 
-    dispatch({
-      type: "ADD_TODO",
-      payload: {
-        id: nanoid(),
-        title,
-        completed: false,
-        categoryId: state.selectedCategoryId,
-        archived: false,
-        createdAt: Date.now(),
-      },
-    });
-  };
+      dispatch({
+        type: "ADD_TODO",
+        payload: {
+          id: nanoid(),
+          title,
+          completed: false,
+          categoryId: state.selectedCategoryId,
+          archived: false,
+          createdAt: Date.now(),
+        },
+      });
+    },
+    [state.selectedCategoryId]
+  );
 
-  const toggleTodo = (id: string) => {
+  const toggleTodo = useCallback((id: string) => {
     dispatch({
       type: "TOGGLE_TODO",
       payload: id,
     });
-  };
+  }, []);
 
-  const deleteTodo = (id: string) => {
+  const deleteTodo = useCallback((id: string) => {
     dispatch({
       type: "DELETE_TODO",
       payload: id,
     });
-  };
+  }, []);
 
-  const archiveTodo = (id: string) => {
+  const archiveTodo = useCallback((id: string) => {
     dispatch({
       type: "ARCHIVE_TODO",
       payload: id,
     });
-  };
+  }, []);
 
-  const unarchiveTodo = (id: string) => {
+  const unarchiveTodo = useCallback((id: string) => {
     dispatch({
       type: "UNARCHIVE_TODO",
       payload: id,
     });
-  };
+  }, []);
 
-  const toggleArchiveView = () => {
+  const toggleArchiveView = useCallback(() => {
     dispatch({
       type: "TOGGLE_ARCHIVE_VIEW",
     });
-  };
+  }, []);
 
-  const renameCategory = (id: string, name: string) => {
+  const renameCategory = useCallback((id: string, name: string) => {
     dispatch({
       type: "RENAME_CATEGORY",
       payload: { id, name },
     });
-  };
+  }, []);
 
-  const updateCategory = (
-    id: string,
-    name: string,
-    color: string,
-    icon: string
-  ) => {
-    dispatch({
-      type: "UPDATE_CATEGORY",
-      payload: { id, name, color, icon },
-    });
-  };
+  const updateCategory = useCallback(
+    (id: string, name: string, color: string, icon: string) => {
+      dispatch({
+        type: "UPDATE_CATEGORY",
+        payload: { id, name, color, icon },
+      });
+    },
+    []
+  );
 
-  const editTodo = (id: string, title: string) => {
+  const editTodo = useCallback((id: string, title: string) => {
     dispatch({
       type: "EDIT_TODO",
       payload: { id, title },
     });
-  };
+  }, []);
 
-  const setTheme = (theme: "light" | "dark") => {
+  const setTheme = useCallback((theme: "light" | "dark") => {
     dispatch({
       type: "SET_THEME",
       payload: theme,
     });
-  };
+  }, []);
 
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     const nextTheme = state.theme === "light" ? "dark" : "light";
     dispatch({
       type: "SET_THEME",
       payload: nextTheme,
     });
-  };
+  }, [state.theme]);
+
+  // Memoize the context value to prevent unnecessary re-renders
+  const contextValue = useMemo(
+    () => ({
+      state,
+      dispatch,
+      addCategory,
+      deleteCategory,
+      selectCategory,
+      addTodo,
+      toggleTodo,
+      deleteTodo,
+      archiveTodo,
+      unarchiveTodo,
+      toggleArchiveView,
+      renameCategory,
+      updateCategory,
+      editTodo,
+      setTheme,
+      toggleTheme,
+      isDarkMode,
+    }),
+    [
+      state,
+      addCategory,
+      deleteCategory,
+      selectCategory,
+      addTodo,
+      toggleTodo,
+      deleteTodo,
+      archiveTodo,
+      unarchiveTodo,
+      toggleArchiveView,
+      renameCategory,
+      updateCategory,
+      editTodo,
+      setTheme,
+      toggleTheme,
+      isDarkMode,
+    ]
+  );
 
   return (
-    <AppContext.Provider
-      value={{
-        state,
-        dispatch,
-        addCategory,
-        deleteCategory,
-        selectCategory,
-        addTodo,
-        toggleTodo,
-        deleteTodo,
-        archiveTodo,
-        unarchiveTodo,
-        toggleArchiveView,
-        renameCategory,
-        updateCategory,
-        editTodo,
-        setTheme,
-        toggleTheme,
-      }}
-    >
-      {children}
-    </AppContext.Provider>
+    <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>
   );
 };
 

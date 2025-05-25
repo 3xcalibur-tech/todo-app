@@ -20,19 +20,41 @@
   }
 }
 
-/* Global theme transition for maximum smoothness */
-*,
-*::before,
-*::after {
-  transition-property: background-color, border-color, color, fill, stroke,
-    opacity, box-shadow, transform, filter, backdrop-filter;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 200ms;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* Root level theme transition - immediate for preventing flash */
+html {
+  transition: none !important;
 }
 
-/* Disable color transitions for text elements to prevent white flash */
+html.dark {
+  transition: none !important;
+}
+
+/* Optimized transitions - only for interactive elements */
+button,
+[role="button"],
+.interactive {
+  transition-property: background-color, border-color, box-shadow, transform,
+    opacity;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Hover and focus states */
+button:hover,
+button:focus,
+[role="button"]:hover,
+[role="button"]:focus {
+  transition-duration: 100ms;
+}
+
+/* Background transitions for containers - but NOT text color */
+.bg-transition {
+  transition-property: background-color, border-color, box-shadow;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+/* Text elements should NOT have color transitions to prevent flash */
 p,
 span,
 h1,
@@ -41,37 +63,17 @@ h3,
 h4,
 h5,
 h6,
-div {
-  transition-property: background-color, border-color, fill, stroke, opacity,
-    box-shadow, transform, filter, backdrop-filter !important;
+div,
+label,
+a {
+  transition-property: none !important;
 }
 
-/* Ensure immediate theme transitions on root element */
-html {
-  transition: background-color 200ms cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
-/* Optimize theme transitions for better performance */
-.dark,
-.dark * {
-  transition-property: background-color, border-color, color, fill, stroke,
-    opacity, box-shadow !important;
-  transition-duration: 200ms !important;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
-/* Override dark mode color transitions for text elements */
-.dark p,
-.dark span,
-.dark h1,
-.dark h2,
-.dark h3,
-.dark h4,
-.dark h5,
-.dark h6,
-.dark div {
-  transition-property: background-color, border-color, fill, stroke, opacity,
-    box-shadow, transform, filter, backdrop-filter !important;
+/* Theme-aware elements with optimized transitions */
+.theme-transition {
+  transition-property: background-color, border-color;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
 }
 
 /* Smooth scrolling */
@@ -93,10 +95,20 @@ html {
 ::-webkit-scrollbar-thumb {
   background-color: rgba(0, 0, 0, 0.1);
   border-radius: 4px;
+  transition: background-color 150ms ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background-color: rgba(0, 0, 0, 0.2);
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.2);
 }
 
 /* Prevent scrolling in category sidebar */
@@ -121,23 +133,74 @@ html {
   overflow: visible !important;
 }
 
-/* Ultra-smooth animations with hardware acceleration */
+/* Optimized animations for specific elements only */
 .todo-item {
-  will-change: transform, opacity;
+  will-change: auto;
   transform: translateZ(0);
   backface-visibility: hidden;
-  perspective: 1000px;
+}
+
+.todo-item:hover {
+  will-change: transform;
 }
 
 .todo-actions {
-  will-change: height, opacity, transform;
+  will-change: auto;
   transform: translateZ(0);
   backface-visibility: hidden;
 }
 
-/* Optimize button animations */
+.todo-actions.animating {
+  will-change: height, opacity, transform;
+}
+
+/* Optimize button animations - only when needed */
 .action-button {
-  will-change: transform, box-shadow;
+  will-change: auto;
   transform: translateZ(0);
   backface-visibility: hidden;
+}
+
+.action-button:hover,
+.action-button:active {
+  will-change: transform, box-shadow;
+}
+
+/* Framer Motion specific optimizations */
+[data-framer-component] {
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/* Prevent layout shifts during animations */
+.layout-stable {
+  contain: layout style;
+}
+
+/* Optimized theme toggle */
+.theme-toggle {
+  transition: background-color 150ms ease, transform 100ms ease;
+}
+
+/* Category animations - smooth but no flash */
+.category-menu {
+  transition: opacity 150ms ease, transform 150ms ease;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/* Form animations */
+.form-overlay {
+  backdrop-filter: blur(4px);
+  transition: backdrop-filter 200ms ease, opacity 200ms ease;
+}
+
+/* Prevent color flash during mount/unmount */
+.no-flash {
+  transition: none !important;
+}
+
+/* Force immediate theme application */
+.theme-immediate * {
+  transition: none !important;
 }

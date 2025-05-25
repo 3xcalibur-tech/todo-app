@@ -20,7 +20,6 @@ export type AppState = {
   selectedCategoryId: string | null;
   showArchived: boolean;
   theme: "light" | "dark";
-  isDarkMode: boolean;
 };
 
 export type AppAction =
@@ -39,5 +38,4 @@ export type AppAction =
       payload: { id: string; name: string; color: string; icon: string };
     }
   | { type: "EDIT_TODO"; payload: { id: string; title: string } }
-  | { type: "SET_THEME"; payload: "light" | "dark" }
-  | { type: "UPDATE_DARK_MODE"; payload: boolean };
+  | { type: "SET_THEME"; payload: "light" | "dark" };

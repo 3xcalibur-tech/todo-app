@@ -37,7 +37,7 @@ const renderIcon = (icon: string) => {
 };
 
 // Theme toggle component
-const ThemeToggle: React.FC = () => {
+const ThemeToggle: React.FC = React.memo(() => {
   const { state, toggleTheme } = useAppContext();
 
   const getThemeIcon = () => {
@@ -54,7 +54,7 @@ const ThemeToggle: React.FC = () => {
 
   return (
     <motion.button
-      className="flex items-center p-3 rounded-lg cursor-pointer hover:bg-white dark:hover:bg-gray-700"
+      className="flex items-center p-3 rounded-lg cursor-pointer hover:bg-white dark:hover:bg-gray-700 theme-toggle bg-transition"
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       onClick={toggleTheme}
@@ -68,11 +68,16 @@ const ThemeToggle: React.FC = () => {
       </span>
     </motion.button>
   );
-};
+});
 
-export const CategorySidebar: React.FC = () => {
-  const { state, selectCategory, toggleArchiveView, deleteCategory } =
-    useAppContext();
+export const CategorySidebar: React.FC = React.memo(() => {
+  const {
+    state,
+    selectCategory,
+    toggleArchiveView,
+    deleteCategory,
+    isDarkMode,
+  } = useAppContext();
   const [showForm, setShowForm] = useState(false);
   const [categoryMenuOpen, setCategoryMenuOpen] = useState<string | null>(null);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
@@ -96,47 +101,56 @@ export const CategorySidebar: React.FC = () => {
     }
   }, [categoryMenuOpen]);
 
-  const handleCategoryClick = (id: string) => {
-    selectCategory(id);
-    setCategoryMenuOpen(null);
-  };
+  const handleCategoryClick = React.useCallback(
+    (id: string) => {
+      selectCategory(id);
+      setCategoryMenuOpen(null);
+    },
+    [selectCategory]
+  );
 
-  const handleArchiveClick = () => {
+  const handleArchiveClick = React.useCallback(() => {
     toggleArchiveView();
     setCategoryMenuOpen(null);
-  };
+  }, [toggleArchiveView]);
 
-  const toggleCategoryMenu = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setCategoryMenuOpen(categoryMenuOpen === id ? null : id);
-  };
+  const toggleCategoryMenu = React.useCallback(
+    (id: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      setCategoryMenuOpen((prevState) => (prevState === id ? null : id));
+    },
+    []
+  );
 
-  const handleDeleteCategory = (categoryId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDeleteCategory = React.useCallback(
+    (categoryId: string, e: React.MouseEvent) => {
+      e.stopPropagation();
 
-    // Prevent deleting the last category
-    if (state.categories.length <= 1) {
-      alert(
-        "You cannot delete the last category. Create another category first."
-      );
+      // Prevent deleting the last category
+      if (state.categories.length <= 1) {
+        alert(
+          "You cannot delete the last category. Create another category first."
+        );
+        setCategoryMenuOpen(null);
+        return;
+      }
+
+      if (
+        window.confirm(
+          "Are you sure you want to delete this category? All todos in this category will also be deleted."
+        )
+      ) {
+        deleteCategory(categoryId);
+      }
       setCategoryMenuOpen(null);
-      return;
-    }
-
-    if (
-      window.confirm(
-        "Are you sure you want to delete this category? All todos in this category will also be deleted."
-      )
-    ) {
-      deleteCategory(categoryId);
-    }
-    setCategoryMenuOpen(null);
-  };
+    },
+    [state.categories.length, deleteCategory]
+  );
 
   return (
     <motion.div
       ref={sidebarRef}
-      className="min-w-fit max-w-sm h-full bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 p-4 flex flex-col"
+      className="min-w-fit max-w-sm h-full bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 p-4 flex flex-col bg-transition"
       initial={{ x: -50, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1.0] }}
@@ -146,10 +160,10 @@ export const CategorySidebar: React.FC = () => {
           Categories
         </h2>
         <motion.button
-          className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 flex items-center justify-center"
+          className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 flex items-center justify-center action-button"
           whileHover={{
             scale: 1.05,
-            backgroundColor: state.isDarkMode ? "#374151" : "#f3f4f6",
+            backgroundColor: isDarkMode ? "#374151" : "#f3f4f6",
           }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setShowForm(true)}
@@ -162,7 +176,7 @@ export const CategorySidebar: React.FC = () => {
         {state.categories.map((category, index) => (
           <motion.div
             key={category.id}
-            className={`flex items-center justify-between p-3 mb-1 rounded-lg cursor-pointer relative ${
+            className={`flex items-center justify-between p-3 mb-1 rounded-lg cursor-pointer relative bg-transition ${
               state.selectedCategoryId === category.id
                 ? "bg-white dark:bg-gray-700 shadow-sm"
                 : "hover:bg-white dark:hover:bg-gray-700 hover:shadow-sm"
@@ -184,7 +198,7 @@ export const CategorySidebar: React.FC = () => {
               </span>
             </div>
             <motion.button
-              className="w-6 h-6 flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 ml-2"
+              className="w-6 h-6 flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 ml-2 action-button"
               whileHover={{ scale: 1.1 }}
               onClick={(e) => toggleCategoryMenu(category.id, e)}
             >
@@ -194,7 +208,7 @@ export const CategorySidebar: React.FC = () => {
             <AnimatePresence>
               {categoryMenuOpen === category.id && (
                 <motion.div
-                  className={`absolute bg-white dark:bg-gray-800 shadow-lg rounded-md py-1 w-32 border border-gray-200 dark:border-gray-600 ${
+                  className={`absolute bg-white dark:bg-gray-800 shadow-lg rounded-md py-1 w-32 border border-gray-200 dark:border-gray-600 category-menu ${
                     index >= state.categories.length - 2
                       ? "bottom-full mb-1 right-0"
                       : "top-full mt-1 right-0"
@@ -237,7 +251,7 @@ export const CategorySidebar: React.FC = () => {
       </div>
 
       <motion.div
-        className={`flex items-center p-3 rounded-lg cursor-pointer mt-2 ${
+        className={`flex items-center p-3 rounded-lg cursor-pointer mt-2 bg-transition ${
           state.showArchived
             ? "bg-white dark:bg-gray-700 shadow-sm"
             : "hover:bg-white dark:hover:bg-gray-700 hover:shadow-sm"
@@ -271,4 +285,4 @@ export const CategorySidebar: React.FC = () => {
       </AnimatePresence>
     </motion.div>
   );
-};
+});
