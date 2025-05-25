@@ -122,6 +122,41 @@ export const TodoItem: React.FC<TodoItemProps> = React.memo(
       }
       setIsDragging(true);
       setIsHovered(false); // Hide drag handle during drag
+
+      // Create a more transparent drag image
+      const dragElement = e.currentTarget as HTMLElement;
+      const rect = dragElement.getBoundingClientRect();
+
+      // Calculate the offset from where the user clicked
+      const offsetX = e.clientX - rect.left;
+      const offsetY = e.clientY - rect.top;
+
+      // Create a more transparent version by capturing the element
+      const tempDiv = dragElement.cloneNode(true) as HTMLElement;
+
+      // Preserve original dimensions and styling
+      tempDiv.style.opacity = "0.3";
+      tempDiv.style.position = "absolute";
+      tempDiv.style.top = "-9999px";
+      tempDiv.style.left = "0px";
+      tempDiv.style.width = `${rect.width}px`;
+      tempDiv.style.height = `${rect.height}px`;
+      tempDiv.style.transform = "none";
+      tempDiv.style.margin = "0";
+      tempDiv.style.pointerEvents = "none";
+
+      document.body.appendChild(tempDiv);
+
+      // Set the custom drag image using the actual click position
+      e.dataTransfer.setDragImage(tempDiv, offsetX, offsetY);
+
+      // Clean up the temporary element after a short delay
+      setTimeout(() => {
+        if (document.body.contains(tempDiv)) {
+          document.body.removeChild(tempDiv);
+        }
+      }, 0);
+
       e.dataTransfer.setData("text/plain", todo.id);
       e.dataTransfer.effectAllowed = "move";
     };
