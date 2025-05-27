@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://todo.smorchkov.online/sitemap.xml 
